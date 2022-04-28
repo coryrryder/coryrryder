@@ -1,0 +1,264 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Apr 20 14:28:01 2022
+
+@author: Cory
+"""
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Import Libraries Section:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+import datetime
+import matplotlib.pyplot as plt
+import numpy
+import pandas as pd
+import keras
+import Tokenizer
+import re
+from tensorflow import keras
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import BatchNormalization
+from keras.layers import LSTM
+from keras.layers import Bidirectional
+from keras.layers import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.layers.embeddings import Embedding
+from nltk.stem import WordNetLemmatizer
+lemma = WordNetLemmatizer()
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Parameters Section and Define Variables:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+# experimented with max_length
+max_length = 7.5
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Load Data Section:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+# load training data
+traindata = pd.read_csv( 'C:/Users/Cory/OneDrive/Desktop/A.I/train.csv' )
+
+# split train to train_x and train_y
+train_x = traindata[ 'tweet' ]
+train_y = traindata[ 'label' ]
+
+# load and split test data
+testdata = pd.read_csv( 'C:/Users/Cory/OneDrive/Desktop/A.I/test.csv' )
+test_x = testdata[ 'tweet' ]
+test_y = testdata[ 'label' ]
+
+# get shapes of datasets distribution
+print( 'Training Data Dist' , len( train_x ))
+print( 'Training Label Dist' , len( train_y ))
+print( 'Testing Data Dist' , len( test_x ))
+
+# calculate % hate speech within training set
+hatespeech_train = 100 * (sum( train_y ) / len( train_y ))
+print( '% Hate Speech in Training Set =' , hatespeech_train )
+
+# log start time for run time later
+start_time = datetime.datetime.now()
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Pretreat Data Section:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Tokenizer.fit_on_texts( train_x )
+vocab_size = len( Tokenizer.word_index ) + 1
+
+# encode to integers
+tweets_INT = Tokenizer.texts_to_sequences( train_x )
+print( tweets_INT )
+
+# set to max length
+padded_docs = pad_sequences( tweets_INT , maxlen=max_length , padding= 'post' )
+print( padded_docs )
+
+# save embedded index with glove
+embedded_index = dict()
+f = open( 'glove.6B.100d.txt' , encoding = 'utf8' )
+for line in f:
+	values = line.split()
+	word = values[ 0 ]
+	coefs = numpy.asarray( values[ 1: ] , dtype = 'float32' )
+	embedded_index[ word ] = coefs
+f.close()
+
+# create matrix of weights 
+embedded_matrix = numpy.zeros(( vocab_size , 50 ))
+for word, i in Tokenizer.word_index.items():
+	embedded_vector = embedded_index.get( word )
+	if embedded_vector is not None:
+		embedded_matrix[ i ] = embedded_vector
+
+print(' Vector ' % len( embedded_index ))
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Define Model Section:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+start = datetime.datetime.now()
+
+# model 1 , default model
+
+#start_time = datetime.datetime.now()
+#model = keras.models.Sequential()
+#model.add(keras.layers.Embedding( vocab_size , 100 , weights = [ embedded_matrix ] , input_length = max_length , trainable = False ))
+#model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True , return_sequences=True))
+#model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True))
+#model.add(keras.layers.Dense( units = 100 , activation = 'relu' ))
+#model.add(keras.layers.Dense( units = 1 , activation = 'sigmoid' ))
+#print(model.summary())
+
+
+# model 3 , model units *2
+
+#start_time = datetime.datetime.now()
+#model = keras.models.Sequential()
+#model.add(keras.layers.Embedding( vocab_size , 100 , weights = [ embedded_matrix ] , input_length = max_length , trainable = False ))
+#model.add(keras.layers.LSTM( units = 200 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True , return_sequences=True))
+#model.add(keras.layers.LSTM( units = 200 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True))
+#model.add(keras.layers.Dense( units = 200 , activation = 'relu' ))
+#model.add(keras.layers.Dense( units = 1 , activation = 'sigmoid' ))
+#print(model.summary())
+
+# model 2 , model units /2
+
+#start_time = datetime.datetime.now()
+#model = keras.models.Sequential()
+#model.add(keras.layers.Embedding( vocab_size , 100 , weights = [ embedded_matrix ] , input_length = max_length , trainable = False ))
+#model.add(keras.layers.LSTM( units = 50 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True , return_sequences=True))
+#model.add(keras.layers.LSTM( units = 50 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True))
+#model.add(keras.layers.Dense( units = 50 , activation = 'relu' ))
+#model.add(keras.layers.Dense( units = 1 , activation = 'sigmoid' ))
+#print(model.summary())
+
+
+# model 4 , +1 dense layer
+
+#start_time = datetime.datetime.now()
+#model = keras.models.Sequential()
+#model.add(keras.layers.Embedding( vocab_size , 100 , weights = [ embedded_matrix ] , input_length = max_length , trainable = False ))
+#model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True , return_sequences=True))
+#model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True))
+#model.add(keras.layers.Dense( units = 100 , activation = 'relu' ))
+#model.add(keras.layers.Dense( units = 100 , activation = 'relu' ))
+#model.add(keras.layers.Dense( units = 1 , activation = 'sigmoid' ))
+#print(model.summary())
+
+
+# model 5 , max len *2
+
+#start_time = datetime.datetime.now()
+#model = keras.models.Sequential()
+#model.add(keras.layers.Embedding( vocab_size , 100 , weights = [ embedded_matrix ] , input_length = max_length , trainable = False ))
+#model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True , return_sequences=True))
+#model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True))
+#model.add(keras.layers.Dense( units = 100 , activation = 'relu' ))
+#model.add(keras.layers.Dense( units = 1 , activation = 'sigmoid' ))
+#print(model.summary())
+
+
+# model 6 max len /2
+
+start_time = datetime.datetime.now()
+model = keras.models.Sequential()
+model.add(keras.layers.Embedding( vocab_size , 100 , weights = [ embedded_matrix ] , input_length = max_length , trainable = False ))
+model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True , return_sequences=True))
+model.add(keras.layers.LSTM( units = 100 , dropout = 0.2 , recurrent_dropout = 0.0 , recurrent_activation = "sigmoid" , activation = "tanh" , use_bias = True))
+model.add(keras.layers.Dense( units = 100 , activation = 'relu' ))
+model.add(keras.layers.Dense( units = 1 , activation = 'sigmoid' ))
+
+
+print( model.summary() )
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Train Model Section:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+# compile
+model.compile( optimizer= 'adam' , loss = 'binary_crossentropy' , metrics = [ 'accuracy' ])
+
+# fit model
+history = model.fit( padded_docs , train_y , batch_size = 32 , epochs = 10 , validation_split = 0.2 )
+
+# print training time
+stop = datetime.datetime.now()
+print ("Training Time" , stop - start )
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Plot Output Section:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+# plot model accuracy rates
+plt.figure(0)
+plt.plot(history.history[ 'accuracy' ] , label = 'Training Accuracy' )
+plt.plot(history.history[ 'val_accuracy' ] , label = 'Validation Accuracy' )
+plt.title('Training vs Validation accuracy')
+plt.ylabel( 'accuracy' )
+plt.xlabel( 'epoch' )
+plt.legend( loc = 'upper right' )
+plt.show()
+
+
+# plot model loss rates
+plt.figure(1)
+plt.plot(history.history[ 'loss' ] , label = 'Training Loss' )
+plt.plot(history.history[ 'val_loss' ] , label = 'Validation Loss' )
+plt.title('Training vs Validation Loss')
+plt.ylabel( 'Loss value' )
+plt.xlabel( 'Epoch' )
+plt.legend( loc = 'upper right' )
+plt.show()
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Predictions with Best Model:
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Tokenizer.fit_on_texts(test_x)
+
+def get_labels( probs ):
+    labels = []
+    for y in probs:
+        if y > .5:
+            labels.append( 1 )
+        else:
+            labels.append( 0 )
+    return labels
+
+# encode to integers
+encoded_test = Tokenizer.texts_to_sequences( test_x[ 'tweet' ])
+padded_test = pad_sequences( encoded_test , maxlen = max_length , padding = 'post' )
+yhat = model.predict( padded_test )
+yhat_labels = get_labels( yhat )
+
+# make predictions
+def predict_hatespeech( score ):
+    return 1 if score > 0.5 else 0
+scores = model.predict( padded_test , batch_size = 1000 , verbose = 1 )
+model_preds = [ predict_hatespeech( score ) for score in scores ]
+
+
+import random
+dataframe = pd.DataFrame( columns = [ 'tweet' , 'prediction' ] , index = [ 0 , 1 , 2 , 3, 4 , 5 ])
+i = 0
+
+while i <= 6 :
+    i = i + 1
+    random_index = random.randint( 0 , len( encoded_test ) -1 )
+    dataframe[ 'tweet' ][ i - 1 ] = test_x[ random_index ]
+    dataframe[ 'prediction' ][ i - 1 ] = model_preds[ random_index ]
+print( dataframe )
+
+# final output
+hatespeech_test = 100 * sum( model_preds ) / (len( model_preds ))
+print('% Hate Speech Test Data =', hatespeech_test )
