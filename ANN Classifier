@@ -1,0 +1,129 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar  1 17:56:28 2022
+
+@author: Cory
+"""
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Import Libraries Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+import numpy as np
+import pandas
+import datetime
+import itertools
+import matplotlib.pyplot as plt
+import tensorflow
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.utils import to_categorical
+from sklearn import preprocessing 
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Load Data Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+my_df = pandas.read_csv( "winequality-white.csv" , delimiter = ";" , header = 0 )
+my_df = my_df.values
+
+x = my_df[ : , 0:11 ]
+y = my_df[ : , 11 ]
+
+#print( 'dataset.type' , type( dataset ))
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Pretreat Data Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+print( len( x ))
+print( len( y ))
+
+scaler=MinMaxScaler( )
+
+x_scaled  = scaler.fit_transform( x )
+y_categories = to_categorical( y )
+
+x_train , x_test , y_train , y_test = train_test_split( x , y_categories , test_size = .2 , random_state = 8 )
+x_train = x_train.astype( 'Float 32' )
+x_test = x_test.astype( 'Float 32' )
+
+np.random.seed( 4079 )
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Parameters Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+batchsize = 50
+EPOCH = 150
+optimizer = 'rmsprop'
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Define Model Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+start_time = datetime.datetime.now( )
+
+model = Sequential( )
+model.add(Dense( 20 , input_dimension = x.shape[ 1 ] , activation = 'relu' ))
+model.add(Dense( 40 , activation = 'relu' ))
+
+model.add(Dense( 10 , activation = 'softmax' ))
+model.summary( )
+
+model.compile( optimizer = optimizer , loss = 'categorical_crossentropy' , metrics = [ 'accuracy' ])
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Train Model Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+np.random.seed( 4079 )
+
+estimator = model.fit( x_train , y_train , batch_size = batchsize , verbose = 0, epochs = EPOCH , validation_data = ( x_test , y_test ))
+
+score = model.evaluate( x_test , y_test )
+
+print( "Model Evaluation :" , score )
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Show output Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+plt.figure( )
+plt.plot( estimator.history[ 'loss' ] , color = 'blue' , label = 'Train Set Loss Values' )
+plt.plot( estimator.history[ 'value_loss' ] , color = 'red' , label = 'Test Set Loss Values')
+
+plt.xlabel( 'EPOCH Level' )
+plt.ylabel( 'Accuracy Rate' )
+plt.title( 'Model Loss Values' )
+plt.legend( loc = "upper right" )
+plt.show( )
+
+stop_time = datetime.datetime.now( )
+
+print( "Model's Required Training Time:" , stop_time - start_time )
+
+
+#rmsprop 3 layers epochs = 50 batch size = 50 run time = 45 secs acc = .4284
+#rmsprop 3 layers epochs = 150 batch size = 50 run time = 1 min 46 secs acc = .5427
+#rmsprop 3 layers epochs = 300 batch size = 50 run time = 4 min 02 secs acc = .5155
+#rmsprop 3 layers epochs = 500 batch size = 50 run time = 8 min 56 sec acc = .5153
+#adam 3 layers epochs = 150 batch size = 50  run time = 43 seconds acc = .5420
+#adamax 3 layers epochs = 150 batch = 50  run time = 35 seconds acc = .4275
+#rmsprop 3 layers epochs = 150 run time = 1 min 49 secs acc = .5432 batch size = 50
+#rmsprop 3 layers epochs = 150 run time = 31 secs secs acc = .4509 batch siz3 = 500
+#rmsprop 3 layers epochs = 150 run time = 8 min 56 secs acc = .5153 batch size = 20
