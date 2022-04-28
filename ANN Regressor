@@ -1,0 +1,101 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Feb 17 10:08:16 2022
+
+@author: Cory
+"""
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Import Libraries Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+import numpy as np
+import pandas as pd
+import datetime
+import tensorflow 
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn import preprocessing 
+from sklearn.preprocessing import MinMaxScaler
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Load Data Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+dataframe = pd.read_csv( 'winequality-white.csv' , delimiter = ' ; ' , header = 0 )
+dataframe = dataframe.replace( np.nan , 0 )
+dataset = dataframe.values
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Pretreat Data Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+X = dataset[ : , 0:11 ]
+Y = dataset[ : , 11 ]
+Xtrain , Xtest , Ytrain , Ytest = train_test_split( X , Y , test_size = 0.2 , random_state = 42 )
+
+XminMax = preprocessing.MinMaxScaler()
+Xtrain = XminMax.fit_transform( Xtrain )
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Define Model Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+np.random.seed( 5072 )
+
+model = Sequential()
+model.add(Dense( 20 , input_dim = 11 , activation = 'relu' ))
+model.add(Dense( 40 , activation = 'relu' ))
+model.add(Dense( 80 , activation = 'relu' ))
+model.add(Dense( 20 , activation = 'relu' ))
+model.add(Dense( 1 , activation = 'linear' ))
+
+model.summary()
+
+model.compile( loss = 'mean_squared_error' , optimizer = 'adam' , metrics = [ 'MSE' , 'MAE' ])
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Train Model Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+start_time = datetime.datetime.now()
+
+estimator = model.fit( Xtrain , Ytrain , epochs = 500 , verbose = 1 )
+plt.plot(estimator.history[ 'MSE' ])
+plt.plot(estimator.history[ 'MAE' ])
+plt.show()
+
+
+modelscores = model.evaluate( Xtrain , Ytrain , verbose=0 )
+
+print(model.metrics_names[ 1 ] , modelscores[ 1 ])
+print(model.metrics_names[ 2 ] , modelscores[ 2 ])
+stop_time = datetime.datetime.now()
+
+print( 'Time to train =' , stop_time - start_time )
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Show output Section
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+plt.plot(estimator.history[ 'MSE' ], label = 'Train Loss' )
+plt.plot(estimator.history[ 'MAE' ], label = 'Test Loss' )
+plt.title( 'Loss Values' )
+plt.xlabel( 'EPOCH Value' )
+plt.ylabel( 'MSE Value' )
+plt.legend(loc = "upper right" )
+plt.show()
+
+modelscores = model.evaluate( Xtrain , Ytrain , verbose = 0 )
+
+print(model.metrics_names[1], modelscores[1])
+print(model.metrics_names[2], modelscores[2])
+
+## 50 epochs: Lowest MSE ~ .5202, Lowest MAE ~ .5591 @ 29 secs
+## 150 epochs: Lowest MSE ~ .5123 , Lowest MAE ~ .5621 @ 1 min 12 secs
+## 300 epochs: Lowest MSE ~ .4589 , Lowest mae ~ .5346 @ 3 min 32 secs
+## 500 epochs: Lowest MSE ~ .1655 , Lowest MAE ~ .3046 @ 4 mins 36 secs
